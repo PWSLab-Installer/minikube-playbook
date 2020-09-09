@@ -1,0 +1,44 @@
+- hosts: localhost
+  connection: local
+  vars:
+
+  tasks:
+    
+    -   name: Check the version of CentOS
+        command: hostnamectl
+        register: os_check
+        ignore_errors: yes
+
+    -   name: Absent the Irrelevant files - Ubuntu 20
+        file:
+          path: /etc/apt/sources.list.d/ansible-ubuntu-ansible-focal.list
+          state: absent
+        when:
+          - os_check.stdout | regex_search("Ubuntu 20")
+    
+    -   name: Install Role Minikube
+        local_action: command ansible-galaxy install -f andrewrothstein.minikube
+          
+    -   name: Install Role Kubectl
+        local_action: command ansible-galaxy install -f andrewrothstein.kubectl
+
+    -   name: Applying role Minikube
+        command: mv ~/.ansible/roles/andrewrothstein.minikube ~/.ansible/roles/pwslab.minikube
+        ignore_errors: yes
+
+    -   name: Applying role Kubectl
+        command: mv ~/.ansible/roles/andrewrothstein.kubectl ~/.ansible/roles/pwslab.kubectl
+        ignore_errors: yes
+
+    -   name: Applying replacement
+        lineinfile:
+            dest: /root/.ansible/roles/pwslab.minikube/meta/main.yml
+            regexp: '^(.*)- role: andrewrothstein.kubectl(.*)$'
+            line: '  - role: pwslab.kubectl'
+            state: present
+
+    -   name: Installing Minikube
+        include_role:
+          name: pwslab.minikube
+    
+    
